@@ -1,5 +1,7 @@
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
 
 data = pd.read_csv("mnist.csv")
 
@@ -24,8 +26,27 @@ b1 = np.random.rand(10, 1) - 0.5
 W2 = np.random.rand(10, 10) - 0.5
 b2 = np.random.rand(10, 1) - 0.5
 
-iterations = 5001
+epochs = 5001
 alpha = 0.1
+
+iterations = []
+train_acc = []
+test_acc = []
+
+fig, ax = plt.subplots()
+(train_line,) = ax.plot([], [], label="Train Accuracy", color="blue")
+(test_line,) = ax.plot([], [], label="Test Accuracy", color="orange")
+
+ax.set_xlim(0, epochs)
+ax.set_ylim(0, 1)
+ax.set_xlabel("Iteration")
+ax.set_ylabel("Accuracy")
+ax.legend(loc="lower right")
+
+def init():
+    train_line.set_data([], [])
+    test_line.set_data([], [])
+    return train_line, test_line
 
 def ReLU(x):
     return np.maximum(0, x)
@@ -75,19 +96,25 @@ def get_predictions(A2):
     return np.argmax(A2, 0)
 
 def get_accuracy(predictions, Y):
-    print(predictions[:10], Y[:10])
     return np.sum(predictions == Y) / Y.size
 
-if __name__ == "__main__":
-    for i in range(iterations):
-        Z1, A1, Z2, A2 = forward_prop(W1, b1, W2, b2, X_train)
-        dW1, db1, dW2, db2 = backward_prop(A1, Z1, W1, A2, Z2, W2, X_train, Y_train)
-        W1, b1, W2, b2 = update(W1, b1, W2, b2, dW1, db1, dW2, db2, alpha)
-        if i % 1000 == 0:
-            print("Iteration:", i)
-            train_preds = get_predictions(A2)
-            print("Train Accuracy:", get_accuracy(train_preds, Y_train))
+def gradient_decent(frame):
+    global W1, b1, W2, b2
+    Z1, A1, Z2, A2 = forward_prop(W1, b1, W2, b2, X_train)
+    dW1, db1, dW2, db2 = backward_prop(A1, Z1, W1, A2, Z2, W2, X_train, Y_train)
+    W1, b1, W2, b2 = update(W1, b1, W2, b2, dW1, db1, dW2, db2, alpha)
+    train_val = get_accuracy(get_predictions(A2), Y_train)
+    _, _, _, A2_test = forward_prop(W1, b1, W2, b2, X_test)
+    test_val = get_accuracy(get_predictions(A2_test), Y_test)
+    
+    iterations.append(frame)
+    train_acc.append(train_val)
+    test_acc.append(test_val)
 
-            _, _, _, A2_test = forward_prop(W1, b1, W2, b2, X_test)
-            test_preds = get_predictions(A2_test)
-            print("Test Accuracy:", get_accuracy(test_preds, Y_test))
+    train_line.set_data(iterations, train_acc)
+    test_line.set_data(iterations, test_acc)
+    return train_line, test_line
+
+
+ani = FuncAnimation(fig, gradient_decent, frames=np.arange(1, epochs+1), init_func=init, blit=True, interval=100, repeat=False)
+plt.show()
