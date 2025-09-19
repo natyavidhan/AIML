@@ -1,7 +1,7 @@
 import numpy as np
 
-images = open('t10k-images.idx3-ubyte', 'rb')
-labels = open('t10k-labels.idx1-ubyte', 'rb')
+images = open('assets/t10k-images.idx3-ubyte', 'rb')
+labels = open('assets/t10k-labels.idx1-ubyte', 'rb')
 
 images.read(16)
 labels.read(8)
