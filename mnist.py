@@ -3,7 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 
-data = pd.read_csv("mnist.csv")
+data = pd.read_csv("assets/mnist.csv")
 
 data = np.array(data)
 r, c = data.shape
@@ -26,27 +26,37 @@ b1 = np.random.rand(10, 1) - 0.5
 W2 = np.random.rand(10, 10) - 0.5
 b2 = np.random.rand(10, 1) - 0.5
 
-epochs = 5001
+epochs = 2500
 alpha = 0.1
 
 iterations = []
 train_acc = []
 test_acc = []
+loss = []
 
-fig, ax = plt.subplots()
-(train_line,) = ax.plot([], [], label="Train Accuracy", color="blue")
-(test_line,) = ax.plot([], [], label="Test Accuracy", color="orange")
+fig, ax1 = plt.subplots()
+(train_line,) = ax1.plot([], [], label="Train Accuracy", color="blue")
+(test_line,) = ax1.plot([], [], label="Test Accuracy", color="orange")
 
-ax.set_xlim(0, epochs)
-ax.set_ylim(0, 1)
-ax.set_xlabel("Iteration")
-ax.set_ylabel("Accuracy")
-ax.legend(loc="lower right")
+ax1.set_xlim(0, epochs)
+ax1.set_ylim(0, 1)
+ax1.set_xlabel("Iteration")
+ax1.set_ylabel("Accuracy")
+ax1.legend(loc="lower right")
+
+ax2 = ax1.twinx()
+(loss_line,) = ax2.plot([], [], label="Loss", color="red")
+ax2.set_ylabel("Loss")
+
+ax2.set_xlim(0, epochs)
+ax2.set_ylim(0, 3)
+ax2.legend(loc="lower left")
 
 def init():
     train_line.set_data([], [])
     test_line.set_data([], [])
-    return train_line, test_line
+    loss_line.set_data([], [])
+    return train_line, test_line, loss_line
 
 def ReLU(x):
     return np.maximum(0, x)
@@ -70,6 +80,11 @@ def one_hot(Y):
 def ReLU_deriv(x):
     return x > 0
 
+def compute_loss(A2, one_hot_Y, m):
+    log_probs = np.log(A2 + 1e-8)
+    loss = -1/m * np.sum(one_hot_Y * log_probs)
+    return loss
+
 def backward_prop(A1, Z1, W1, A2, Z2, W2, X, Y):
     m = X.shape[1]
     one_hot_Y = one_hot(Y)
@@ -82,7 +97,9 @@ def backward_prop(A1, Z1, W1, A2, Z2, W2, X, Y):
     dW1 = 1 / m * dZ1.dot(X.T)
     db1 = 1 / m * np.sum(dZ1, axis=1, keepdims=True)
     
-    return dW1, db1, dW2, db2
+    loss = compute_loss(A2, one_hot_Y, m)
+    
+    return dW1, db1, dW2, db2, loss
 
 def update(W1, b1, W2, b2, dW1, db1, dW2, db2, alpha):
     W1 = W1 - alpha * dW1
@@ -101,7 +118,7 @@ def get_accuracy(predictions, Y):
 def gradient_decent(frame):
     global W1, b1, W2, b2
     Z1, A1, Z2, A2 = forward_prop(W1, b1, W2, b2, X_train)
-    dW1, db1, dW2, db2 = backward_prop(A1, Z1, W1, A2, Z2, W2, X_train, Y_train)
+    dW1, db1, dW2, db2, loss_val = backward_prop(A1, Z1, W1, A2, Z2, W2, X_train, Y_train)
     W1, b1, W2, b2 = update(W1, b1, W2, b2, dW1, db1, dW2, db2, alpha)
     train_val = get_accuracy(get_predictions(A2), Y_train)
     _, _, _, A2_test = forward_prop(W1, b1, W2, b2, X_test)
@@ -110,11 +127,14 @@ def gradient_decent(frame):
     iterations.append(frame)
     train_acc.append(train_val)
     test_acc.append(test_val)
+    loss.append(loss_val)
 
     train_line.set_data(iterations, train_acc)
     test_line.set_data(iterations, test_acc)
-    return train_line, test_line
+    loss_line.set_data(iterations, loss)
+    print(train_val, test_val, loss_val)
+    return train_line, test_line, loss_line
 
 
-ani = FuncAnimation(fig, gradient_decent, frames=np.arange(1, epochs+1), init_func=init, blit=True, interval=100, repeat=False)
+ani = FuncAnimation(fig, gradient_decent, frames=np.arange(1, epochs+1), init_func=init, blit=True, interval=1, repeat=False)
 plt.show()
