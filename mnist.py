@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
+import sys
 
 data = pd.read_csv("assets/mnist.csv")
 
@@ -20,11 +21,17 @@ X_train = data_train[1:c]
 X_train = X_train / 255.0
 X_test = X_test / 255.0
 
-
-W1 = np.random.rand(10, 784) - 0.5
-b1 = np.random.rand(10, 1) - 0.5
-W2 = np.random.rand(10, 10) - 0.5
-b2 = np.random.rand(10, 1) - 0.5
+if "--weights" in sys.argv:
+    weights = np.load("assets/mnist_weights.npz")
+    W1 = weights["W1"]
+    b1 = weights["b1"]
+    W2 = weights["W2"]
+    b2 = weights["b2"]
+else:
+    W1 = np.random.rand(10, 784) - 0.5
+    b1 = np.random.rand(10, 1) - 0.5
+    W2 = np.random.rand(10, 10) - 0.5
+    b2 = np.random.rand(10, 1) - 0.5
 
 epochs = 2500
 alpha = 0.1
@@ -132,7 +139,18 @@ def gradient_decent(frame):
     train_line.set_data(iterations, train_acc)
     test_line.set_data(iterations, test_acc)
     loss_line.set_data(iterations, loss)
-    print(train_val, test_val, loss_val)
+    # print(frame, train_val, test_val, loss_val)
+    if frame % 100 == 0:
+        print(f"Epoch {frame}/{epochs} - Loss: {loss_val:.4f} - Train Accuracy: {train_val:.4f} - Test Accuracy: {test_val:.4f}")
+    if frame == epochs and ("--save" in sys.argv):
+        data = {
+            "W1": W1,
+            "b1": b1,
+            "W2": W2,
+            "b2": b2
+        }
+        np.savez("assets/mnist_weights.npz", **data)
+        print("Weights saved to mnist_weights.npz")
     return train_line, test_line, loss_line
 
 
